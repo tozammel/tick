@@ -84,7 +84,7 @@ void ProxSeparable::_call_i(ulong i,
     TICK_CLASS_DOES_NOT_IMPLEMENT(get_class_name());
 }
 
-virtual void ProxSeparable::_call_i(ulong i,
+void ProxSeparable::_call_i(ulong i,
                                     ArrayDouble &coeffs,
                                     double step,
                                     ArrayDouble &out,

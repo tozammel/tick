@@ -88,12 +88,12 @@ void SVRG::solve_sparse() {
   ulong rand_index{0};
 
   if (variance_reduction == VarianceReductionMethod::Random ||
-      variance_reduction == VarianceReductionMethod::Average) {
-      next_iterate.init_to_zero();
+    variance_reduction == VarianceReductionMethod::Average) {
+    next_iterate.init_to_zero();
   }
 
   if (variance_reduction == VarianceReductionMethod::Random) {
-      rand_index = rand_unif(epoch_size);
+    rand_index = rand_unif(epoch_size);
   }
 
   for (ulong t = 0; t < epoch_size; ++t) {
@@ -128,11 +128,20 @@ void SVRG::solve_sparse() {
       prox->_call_i(j, iterate, step, iterate);
       // Update last_time
       last_time[j] = t;
-    }
-    // And let's not forget to update the intercept as well
-    if (use_intercept) {
-      iterate[n_features] -= step * (delta + full_gradient[n_features]);
-      // NB: no lazy-updating for the intercept, and no prox applied on it
+
+      if (variance_reduction == VarianceReductionMethod::Random && t == rand_index)  {
+        next_iterate = iterate;  
+      }
+
+      if (variance_reduction == VarianceReductionMethod::Average)  {
+        next_iterate.mult_incr(iterate, 1.0 / epoch_size); 
+      }
+
+      // And let's not forget to update the intercept as well
+      if (use_intercept) {
+        iterate[n_features] -= step * (delta + full_gradient[n_features]);
+        // NB: no lazy-updating for the intercept, and no prox applied on it
+      }
     }
   }
 
