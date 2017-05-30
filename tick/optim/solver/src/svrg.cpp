@@ -15,10 +15,12 @@ SVRG::SVRG(ulong epoch_size,
       step(step), variance_reduction(variance_reduction) {
 }
 
+
 void SVRG::solve() {
-    ArrayDouble mu(iterate.size());
-    ArrayDouble fixed_w = next_iterate;
-    model->grad(fixed_w, mu);
+
+    full_gradient = ArrayDouble(iterate.size());
+    fixed_w = next_iterate;
+    model->grad(fixed_w, full_gradient);
 
     if (model->is_sparse()) {
         solve_sparse();
@@ -43,7 +45,7 @@ void SVRG::solve() {
             model->grad_i(i, iterate, grad_i);
             model->grad_i(i, fixed_w, grad_i_fixed_w);
             for (ulong j = 0; j < iterate.size(); ++j) {
-                iterate[j] = iterate[j] - step * (grad_i[j] - grad_i_fixed_w[j] + mu[j]);
+                iterate[j] = iterate[j] - step * (grad_i[j] - grad_i_fixed_w[j] + full_gradient[j]);
             }
             prox->call(iterate, step, iterate);
 
@@ -52,6 +54,9 @@ void SVRG::solve() {
 
             if (variance_reduction == VarianceReductionMethod::Average)
                 next_iterate.mult_incr(iterate, 1.0 / epoch_size);
+
+          // std::cout << "t= " << t << std::endl;
+          // iterate.print();
         }
 
         if (variance_reduction == VarianceReductionMethod::Last)
@@ -59,6 +64,10 @@ void SVRG::solve() {
     }
 
     t += epoch_size;
+
+  // std::cout << "end epoch" << std::endl;
+  // iterate.print();
+
 }
 
 void SVRG::solve_sparse() {
@@ -72,12 +81,10 @@ void SVRG::solve_sparse() {
   ulong n_features = model->get_n_features();
   bool use_intercept = model->use_intercept();
 
-  // An array for the full gradient used in variance reduction
-  ArrayDouble full_gradient(iterate.size());
   // We need a copy of the current iterate, at which the full gradient will be computed
-  ArrayDouble fixed_w = iterate;
+  // ArrayDouble fixed_w = iterate;
   // Computation of the full gradient once and for all in this epoch
-  model->grad(fixed_w, full_gradient);
+  // model->grad(fixed_w, full_gradient);
 
   // The array will contain the iteration index of the last update of each
   // coefficient (model-weights and intercept)
@@ -95,7 +102,7 @@ void SVRG::solve_sparse() {
     rand_index = rand_unif(epoch_size);
   }
 
-  for (ulong t = 0; t < epoch_size; ++t) {
+  for (t = 0; t < epoch_size; ++t) {
     // Get next sample index
     ulong i = get_next_i();
     // Sparse features vector
@@ -110,63 +117,89 @@ void SVRG::solve_sparse() {
       // Get the index of the idx-th sparse feature of x_i
       ulong j = x_i.indices()[idx_nnz];
       // How many iterations since the last update of feature j
-      ulong delay_j = t - last_time[j] - 1;
+
+      //std::cout << "t= " << t << "last_time[j]= " << last_time[j] << std::endl;
+
+      ulong delay_j = 0;
+      if (t > last_time[j] + 1) {
+        delay_j = t - last_time[j] - 1;
+      }
+
+      //std::cout << "delay_j= " << delay_j << std::endl;
       //
       double full_gradient_j = full_gradient[j];
 
-      // std::cout << "idx_nnz= " << idx_nnz << std::endl;
+      //std::cout << "full_gradient_j= " << full_gradient_j << std::endl;
 
       if(delay_j > 0) {
         // If there is delay, then we need to update coordinate j of the iterate first
         // We need to apply the delayed gradient steps for variance reduction
         iterate[j] -= step * delay_j * full_gradient_j;
+
+       // std::cout << "step= " << step << std::endl;
         // And we need to apply the delayed regularization
         // std::cout << "idx_nnz= " << idx_nnz << std::endl;
+
+        //std::cout << "iterate[j]= " << iterate[j] << std::endl;
         prox->_call_i(j, iterate, step, iterate, delay_j);
+        //std::cout << "iterate[j]= " << iterate[j] << std::endl;
         // std::cout << "idx_nnz= " << idx_nnz << std::endl;
       }
       //std::cout << "idx_nnz= " << idx_nnz << std::endl;
-
+      //std::cout << "iterate[j]= " << iterate[j] << std::endl;
       // Apply gradient descent to the model weights in the support of x_i
       iterate[j] -= step * (x_i.data()[idx_nnz] * delta + full_gradient_j);
-
+      //std::cout << "iterate[j]= " << iterate[j] << std::endl;
       // std::cout << "idx_nnz= " << idx_nnz << std::endl;
 
-
+      //std::cout << "iterate[j]= " << iterate[j] << std::endl;
       // Regularize the features of the model weights in the support of x_i
       prox->_call_i(j, iterate, step, iterate);
-
+      //std::cout << "iterate[j]= " << iterate[j] << std::endl;
       // std::cout << "idx_nnz= " << idx_nnz << std::endl;
 
       // Update last_time
       last_time[j] = t;
-
-      if (variance_reduction == VarianceReductionMethod::Random && t == rand_index) {
-        next_iterate = iterate;
-      }
-
-      if (variance_reduction == VarianceReductionMethod::Average) {
-        next_iterate.mult_incr(iterate, 1.0 / epoch_size);
-      }
-
+      //std::cout << "t " << t << std::endl;
 
       // std::cout << "idx_nnz= " << idx_nnz << std::endl;
 
       // And let's not forget to update the intercept as well
-      if (use_intercept) {
-        iterate[n_features] -= step * (delta + full_gradient[n_features]);
-        // NB: no lazy-updating for the intercept, and no prox applied on it
-      }
 
       // std::cout << "idx_nnz= " << idx_nnz << std::endl;
-
     }
+    if (use_intercept) {
+      iterate[n_features] -= step * (delta + full_gradient[n_features]);
+      // NB: no lazy-updating for the intercept, and no prox applied on it
+    }
+
+    if (variance_reduction == VarianceReductionMethod::Random && t == rand_index) {
+      next_iterate = iterate;
+    }
+
+    if (variance_reduction == VarianceReductionMethod::Average) {
+      next_iterate.mult_incr(iterate, 1.0 / epoch_size);
+    }
+
+    //std::cout << "t= " << t << std::endl;
+    //iterate.print();
   }
+
+  //std::cout << "end epoch" << std::endl;
+  //std::cout << "t= " << t << std::endl;
 
   // Now we need to fully update the iterate (not the intercept),
   // since we reached the end of the epoch
   for(ulong j=0; j < n_features; ++j) {
-    ulong delay_j = t - last_time[j] - 1;
+    ulong delay_j = 0;
+    if (t > last_time[j] + 1) {
+      delay_j = t - last_time[j] - 1;
+    }
+
+    //std::cout << "end epoch" << std::endl;
+    //std::cout << "t= " << t << "last_time[j]= " << last_time[j] << std::endl;
+    //std::cout << "delay_j= " << delay_j << "full_gradient[j]= " << full_gradient[j] << std::endl;
+
     if(delay_j > 0) {
       // If there is delay, then we need to update coordinate j of the iterate first
       // We need to apply the delayed gradient steps for variance reduction
@@ -174,7 +207,13 @@ void SVRG::solve_sparse() {
       // And we need to apply the delayed regularization
       prox->_call_i(j, iterate, step, iterate, delay_j);
     }
+
+    // iterate.print();
   }
+
+  t += epoch_size;
+
+
 
   if (variance_reduction == VarianceReductionMethod::Last)
       next_iterate = iterate;
