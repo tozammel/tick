@@ -114,17 +114,30 @@ void SVRG::solve_sparse() {
       //
       double full_gradient_j = full_gradient[j];
 
+      // std::cout << "idx_nnz= " << idx_nnz << std::endl;
+
       if(delay_j > 0) {
         // If there is delay, then we need to update coordinate j of the iterate first
         // We need to apply the delayed gradient steps for variance reduction
         iterate[j] -= step * delay_j * full_gradient_j;
         // And we need to apply the delayed regularization
+        // std::cout << "idx_nnz= " << idx_nnz << std::endl;
         prox->_call_i(j, iterate, step, iterate, delay_j);
+        // std::cout << "idx_nnz= " << idx_nnz << std::endl;
       }
+      //std::cout << "idx_nnz= " << idx_nnz << std::endl;
+
       // Apply gradient descent to the model weights in the support of x_i
       iterate[j] -= step * (x_i.data()[idx_nnz] * delta + full_gradient_j);
+
+      // std::cout << "idx_nnz= " << idx_nnz << std::endl;
+
+
       // Regularize the features of the model weights in the support of x_i
       prox->_call_i(j, iterate, step, iterate);
+
+      // std::cout << "idx_nnz= " << idx_nnz << std::endl;
+
       // Update last_time
       last_time[j] = t;
 
@@ -136,11 +149,17 @@ void SVRG::solve_sparse() {
         next_iterate.mult_incr(iterate, 1.0 / epoch_size);
       }
 
+
+      // std::cout << "idx_nnz= " << idx_nnz << std::endl;
+
       // And let's not forget to update the intercept as well
       if (use_intercept) {
         iterate[n_features] -= step * (delta + full_gradient[n_features]);
         // NB: no lazy-updating for the intercept, and no prox applied on it
       }
+
+      // std::cout << "idx_nnz= " << idx_nnz << std::endl;
+
     }
   }
 

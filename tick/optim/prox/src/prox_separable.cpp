@@ -89,9 +89,5 @@ void ProxSeparable::_call_i(ulong i,
                             double step,
                             ArrayDouble &out,
                             ulong repeat) const {
-    if (repeat >= 1) {
-        for(ulong r = 0; r < repeat; ++r) {
-            _call_i(i, coeffs, step, out);
-        }
-    }
+  TICK_CLASS_DOES_NOT_IMPLEMENT(get_class_name());
 }
