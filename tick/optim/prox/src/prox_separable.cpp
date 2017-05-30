@@ -85,12 +85,12 @@ void ProxSeparable::_call_i(ulong i,
 }
 
 void ProxSeparable::_call_i(ulong i,
-                                    ArrayDouble &coeffs,
-                                    double step,
-                                    ArrayDouble &out,
-                                    ulong repeat) const {
+                            ArrayDouble &coeffs,
+                            double step,
+                            ArrayDouble &out,
+                            ulong repeat) const {
     if (repeat >= 1) {
-        for(ulong i=0; i < repeat; ++i) {
+        for(ulong r = 0; r < repeat; ++r) {
             _call_i(i, coeffs, step, out);
         }
     }

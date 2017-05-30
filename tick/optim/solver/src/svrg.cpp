@@ -70,7 +70,6 @@ void SVRG::solve_sparse() {
   // (non-zero values) of the sampled vector of features
 
   ulong n_features = model->get_n_features();
-  ulong n_coeffs = model->get_n_coeffs();
   bool use_intercept = model->use_intercept();
 
   // An array for the full gradient used in variance reduction
@@ -107,7 +106,7 @@ void SVRG::solve_sparse() {
     double delta = alpha_i_iterate - alpha_i_fixed_w;
 
     // We update the iterate within the support of the features vector
-    for (ulong idx_nnz = 0; idx_nnz < x_i.size_sparse(); idx_nnz++) {
+    for (ulong idx_nnz = 0; idx_nnz < x_i.size_sparse(); ++idx_nnz) {
       // Get the index of the idx-th sparse feature of x_i
       ulong j = x_i.indices()[idx_nnz];
       // How many iterations since the last update of feature j
@@ -129,12 +128,12 @@ void SVRG::solve_sparse() {
       // Update last_time
       last_time[j] = t;
 
-      if (variance_reduction == VarianceReductionMethod::Random && t == rand_index)  {
-        next_iterate = iterate;  
+      if (variance_reduction == VarianceReductionMethod::Random && t == rand_index) {
+        next_iterate = iterate;
       }
 
-      if (variance_reduction == VarianceReductionMethod::Average)  {
-        next_iterate.mult_incr(iterate, 1.0 / epoch_size); 
+      if (variance_reduction == VarianceReductionMethod::Average) {
+        next_iterate.mult_incr(iterate, 1.0 / epoch_size);
       }
 
       // And let's not forget to update the intercept as well
