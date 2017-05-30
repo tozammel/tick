@@ -35,6 +35,13 @@ class ProxSeparable : public Prox {
                        ulong start,
                        ulong end);
 
+    virtual void _call_i(ulong i,
+                       ArrayDouble &coeffs,
+                       double step,
+                       ArrayDouble &out,
+                       ulong repeat) const;
+
+
     // Compute the value given by the i-th coordinate only (multiplication by lambda must
     // not be done here)
     virtual double _value_i(ulong i,
