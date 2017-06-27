@@ -18,6 +18,10 @@ class ModelLabelsFeatures : public virtual Model {
   //! Features matrix (either sparse or not)
   SBaseArrayDouble2dPtr features;
 
+  bool ready_columns_sparsity;
+
+  ArrayULong columns_sparsity;
+
  public:
   ModelLabelsFeatures(SBaseArrayDouble2dPtr features,
                       SArrayDoublePtr labels);
@@ -50,6 +54,8 @@ class ModelLabelsFeatures : public virtual Model {
   ulong get_epoch_size() const override {
     return n_samples;
   }
+
+  void compute_columns_non_zeros(ArrayULong &columns_sparsity);
 
   template<class Archive>
   void load(Archive & ar) {
