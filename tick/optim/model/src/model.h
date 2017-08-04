@@ -64,15 +64,25 @@ class Model {
     TICK_CLASS_DOES_NOT_IMPLEMENT(get_class_name());
   }
 
-  virtual double sdca_dual_min_i(ulong i,
-                                 const ArrayDouble &dual_vector,
+  virtual double sdca_dual_min_i(const ulong i,
+                                 const double dual_i,
                                  const ArrayDouble &primal_vector,
-                                 const ArrayDouble &previous_delta_dual,
+                                 const double previous_delta_dual_i,
                                  double l_l2sq) {
     TICK_CLASS_DOES_NOT_IMPLEMENT(get_class_name());
   }
 
+  virtual SArrayULongPtr get_sdca_index_map(){
+    return nullptr;
+  }
+
   virtual BaseArrayDouble get_features(const ulong i) const {
+    TICK_CLASS_DOES_NOT_IMPLEMENT(get_class_name());
+  }
+
+  virtual void sdca_primal_dual_relation(const double l_l2sq,
+                                         const ArrayDouble &dual_vector,
+                                         ArrayDouble &out_primal_vector){
     TICK_CLASS_DOES_NOT_IMPLEMENT(get_class_name());
   }
 
